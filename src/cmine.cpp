@@ -1,8 +1,10 @@
-#include <vector>
-#include <ncurses.h>
 #include <cstddef>
 #include <cstdlib>
 #include <clocale>
+#include <ctime>
+#include <ncurses.h>
+
+#include <vector>
 
 using namespace std;
 
@@ -50,9 +52,10 @@ public:
     setBombs();
     markrest = bombs;
     openrest = width * height - bombs;
+    refreshAll();
+    printRest();
   }
   void play() {
-    initScreen();
     while (stat == NONE) {
       int ch = getch();
       char inch = (char)tolower(ch);
@@ -77,33 +80,24 @@ public:
 	}
       }
       if (stat == LOSE){
-	mvaddstr(0, 10, "GAMEOVER");
-	refreshall();
+	mvaddstr(0, 30, "GAMEOVER");
       } else if (stat == WIN){
-	mvaddstr(0, 10, "CLEAR");
-	refreshall();
+	mvaddstr(0, 30, "CLEAR");
       }
     }
+    refreshAll();
+    getch();
   }
 protected:
   int scH() { return height + 2; }
   int scW() { return width + 2; }
-  void initScreen() {
-    for (int row = 0; row < scH(); ++row){
-      for (int col = 0; col < width + 2; ++col){
-	rewrite(row, col);
-      }
-    }
-    refresh();
-  }
-  void refreshall(){
+  void refreshAll(){
     for (int row = 0; row < scH(); ++row){
       for (int col = 0; col < scW(); ++col){
 	rewrite(row, col);
       }
     }
     refresh();
-    getch();
   }
   bool inbound(int row, int col){
     return row > 0 && row < height + 1 && col > 0 && col < width + 1;
@@ -142,9 +136,11 @@ protected:
     } else {
       return;
     }
+    printRest();
+  }
+  void printRest() {
     mvprintw(0, 2, "rest: %03d", markrest);
   }
-
   void setBombs() {
     vector<int> rands(height * width);
     for (int i = 0; i < rands.size() ; ++i){
