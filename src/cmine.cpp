@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <clocale>
 #include <ctime>
+#include <cctype>
 #include <ncurses.h>
 
 #include <vector>

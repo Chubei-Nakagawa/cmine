@@ -1,5 +1,5 @@
 cmine : cmine.cpp
-	g++ -lstdc++ -lncurses -o cmine cmine.cpp
+	g++  -o cmine cmine.cpp -lstdc++ -lncurses
 
 clean :
 	rm cmine
