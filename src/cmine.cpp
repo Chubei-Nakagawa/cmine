@@ -5,6 +5,9 @@
 #include <cctype>
 #include <ncurses.h>
 
+#include <thread>
+#include <chrono>
+
 #include <vector>
 
 using namespace std;
@@ -20,7 +23,7 @@ protected:
   int curx;
   int cury;
   Stat wall;
-  enum { NONE, WIN, LOSE } stat;
+  enum { NONE, PLAYING, WIN, LOSE } stat;
     
   static int dx[8];
   static int dy[8];
@@ -32,12 +35,18 @@ protected:
   int dispy;
   int markrest;
   int openrest;
+  int disptime;
+  int curtime;
+  std::thread timer_thread;
 public:
-  MineApp() : stat(NONE) , wall(OPEN), dispy(1), dispx(0) {
+  MineApp() : stat(NONE) , wall(OPEN), dispy(1), dispx(0) , disptime(-1), curtime(0) {
     srand(time(NULL));
     markkey = 'z';
     flagkey = 'a';
     openkey = ' ';
+  }
+  ~MineApp() {
+    timer_thread.join();
   }
   void init(int height, int width, int bombs = 0) {
     this->width = width;
@@ -55,9 +64,10 @@ public:
     openrest = width * height - bombs;
     refreshAll();
     printRest();
+    printTime();
   }
   void play() {
-    while (stat == NONE) {
+    while (stat == NONE || stat == PLAYING) {
       int ch = getch();
       char inch = (char)tolower(ch);
       if (inch == openkey) {
@@ -92,6 +102,30 @@ public:
 protected:
   int scH() { return height + 2; }
   int scW() { return width + 2; }
+  void printTime() {
+    if (disptime == curtime) return;
+    mvprintw(0, 15, "Time:%03d", curtime);
+    disptime = curtime;
+    refresh();
+  }
+  void startTimer(){
+    timer_thread = thread([this]{
+	using namespace std::chrono;
+	auto start_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+	try {
+	  while (this->stat == PLAYING) {
+	    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+	    auto now_time = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+
+	    curtime = ((now_time - start_time).count() +999 )/ 1000;
+	    printTime();
+	    if (curtime == 999) break;
+	  }
+	}
+	catch(...){}
+      });
+    
+  }
   void refreshAll(){
     for (int row = 0; row < scH(); ++row){
       for (int col = 0; col < scW(); ++col){
@@ -117,6 +151,10 @@ protected:
   }
   void openOne(int row, int col){
     if (panel(row,col) != CLOSE) return;
+    if (stat == NONE){
+      stat = PLAYING;
+      startTimer();
+    }
     panel(row,col) = OPEN;
     openrest--;
     if (bomb(row,col)){
